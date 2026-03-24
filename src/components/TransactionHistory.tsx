@@ -15,6 +15,7 @@ import type { TransactionFilter } from "@/types/transaction";
 import { History, Loader2 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { shortenAddress, formatRelativeTime, formatAbsoluteTime } from "@/utils/format";
+import { COMPUTE_BUDGET_PROGRAM_ID } from "@/solana/builtinIdls";
 
 interface TransactionHistoryProps {
   address: string;
@@ -53,7 +54,7 @@ export function TransactionHistory({
     const names = new Set<string>();
     for (const tx of allTransactions) {
       for (const ix of tx.instructions) {
-        if (ix.decoded?.instructionName) {
+        if (ix.decoded?.instructionName && ix.programId !== COMPUTE_BUDGET_PROGRAM_ID) {
           names.add(ix.decoded.instructionName);
         }
       }
@@ -201,7 +202,7 @@ export function TransactionHistory({
                     const isSuccess = tx.err === null;
                     const ixNames: string[] = [];
                     for (const ix of tx.instructions) {
-                      if (ix.decoded?.instructionName && !ixNames.includes(ix.decoded.instructionName)) {
+                      if (ix.decoded?.instructionName && ix.programId !== COMPUTE_BUDGET_PROGRAM_ID && !ixNames.includes(ix.decoded.instructionName)) {
                         ixNames.push(ix.decoded.instructionName);
                       }
                     }

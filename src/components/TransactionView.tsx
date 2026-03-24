@@ -7,6 +7,8 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useHistory } from "@/contexts/HistoryContext";
 import { GraphProvider, useGraph } from "@/contexts/GraphContext";
 import { fetchTransactionBySignature } from "@/solana/fetchTransaction";
+import { simulateRawTransaction } from "@/solana/simulateTransaction";
+import { COMPUTE_BUDGET_PROGRAM_ID } from "@/solana/builtinIdls";
 import { decodeTransaction } from "@/engine/transactionDecoder";
 import { TransactionHeader } from "@/components/TransactionHeader";
 import { TransactionLogs } from "@/components/TransactionLogs";
@@ -60,9 +62,9 @@ export function TransactionView() {
   const startY = useRef(0);
   const startHeight = useRef(0);
 
-  // Fetch and decode transaction when signature changes
+  // Fetch and decode transaction when signature changes (skip for simulated txs)
   useAsync(async () => {
-    if (!state.txSignature || !state.txLoading) return;
+    if (!state.txSignature || !state.txLoading || state.txSimulated) return;
 
     try {
       const tx = await fetchTransactionBySignature(
@@ -83,6 +85,7 @@ export function TransactionView() {
 
       // Track transaction visit in history
       const instructionNames = viewData.transaction.instructions
+        .filter((ix) => ix.programId !== COMPUTE_BUDGET_PROGRAM_ID)
         .map((ix) => ix.decoded?.instructionName)
         .filter((n): n is string => !!n);
       addHistoryItem({
@@ -102,6 +105,25 @@ export function TransactionView() {
       });
     }
   }, [state.txSignature, state.txLoading, rpcEndpoint]);
+
+  // Simulate transaction when raw message is provided
+  useAsync(async () => {
+    if (!state.txRawMessage || !state.txLoading || !state.txSimulated) return;
+
+    try {
+      const { parsedTransaction, computeUnits } = await simulateRawTransaction(
+        state.txRawMessage,
+        rpcEndpoint,
+      );
+      const viewData = await decodeTransaction(parsedTransaction, rpcEndpoint);
+      dispatch({ type: "SET_SIMULATED_TX", data: viewData, computeUnits });
+    } catch (err) {
+      dispatch({
+        type: "SET_TX_ERROR",
+        error: err instanceof Error ? err.message : "Failed to simulate transaction",
+      });
+    }
+  }, [state.txRawMessage, state.txLoading, state.txSimulated, rpcEndpoint]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
@@ -182,7 +204,7 @@ export function TransactionView() {
         <div ref={containerRef} className="flex-1 flex min-h-0 w-full">
           {/* Main content column */}
           <div className="flex-1 flex flex-col min-h-0">
-            <TransactionHeader tx={transaction} />
+            <TransactionHeader tx={transaction} simulated={state.txSimulated} computeUnits={state.txComputeUnits} />
 
             {/* Scrollable info section - logs first per user preference */}
             {collapsed !== "info" && (

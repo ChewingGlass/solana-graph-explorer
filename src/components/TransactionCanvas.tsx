@@ -310,7 +310,8 @@ function TransactionCanvasInner({ txData, onInstructionSelect }: TransactionCanv
     });
   }, [edges, activeFilter, clusters, nodes]);
 
-  // Async account enrichment: fetch and decode all unique accounts
+  // Async account enrichment: fetch and decode all unique accounts.
+  // For simulated transactions, just clear loading flags without fetching.
   useAsync(async () => {
     const accountNodes = initialNodes.filter((n) => n.type === "account");
     if (accountNodes.length === 0) return;
@@ -322,6 +323,22 @@ function TransactionCanvasInner({ txData, onInstructionSelect }: TransactionCanv
       const existing = addrToNodeIds.get(addr) ?? [];
       existing.push(node.id);
       addrToNodeIds.set(addr, existing);
+    }
+
+    // Filter out invalid addresses (e.g. "idx:8" from unresolved address table lookups)
+    for (const addr of addrToNodeIds.keys()) {
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) {
+        const nodeIds = addrToNodeIds.get(addr)!;
+        for (const nodeId of nodeIds) {
+          dispatch({ type: "SET_NODE_DATA", nodeId, data: { isLoading: false } });
+        }
+        setNodes((prev) =>
+          prev.map((n) =>
+            nodeIds.includes(n.id) ? { ...n, data: { ...n.data, isLoading: false } } : n,
+          ),
+        );
+        addrToNodeIds.delete(addr);
+      }
     }
 
     const uniqueAddrs = Array.from(addrToNodeIds.keys());

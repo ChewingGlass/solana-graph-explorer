@@ -15,8 +15,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useRelationshipRules } from "@/hooks/useRelationshipRules";
 import { useClearAndExplore } from "@/hooks/useClearAndExplore";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { Download, Upload, Menu, Sun, Moon } from "lucide-react";
+import { Download, Upload, Menu, Sun, Moon, FlaskConical } from "lucide-react";
 import { HistoryProvider } from "@/contexts/HistoryContext";
+import { InspectTransactionModal } from "@/components/InspectTransactionModal";
 
 function RelationshipRuleEngine() {
   useRelationshipRules();
@@ -96,6 +97,7 @@ function DarkModeToggle() {
 
 function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [inspectOpen, setInspectOpen] = useState(false);
   const isSm = useMediaQuery("(max-width: 767px)");
   const { state: viewState, dispatch: viewDispatch, backToGraph } = useView();
   const clearAndExplore = useClearAndExplore();
@@ -136,6 +138,18 @@ function AppLayout() {
         <div className="ml-auto flex items-center gap-2 pr-3">
           {/* Bookmarks */}
           <BookmarksButton onSelect={(addr) => clearAndExplore(addr)} />
+          {/* Inspect Transaction */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setInspectOpen(true)}
+            title="Inspect a raw encoded transaction"
+          >
+            <FlaskConical className="size-4 mr-1" />
+            Inspect
+          </Button>
+          <InspectTransactionModal open={inspectOpen} onOpenChange={setInspectOpen} />
           {/* PdaSearch: visible at md+, hidden on sm */}
           <div className="hidden md:flex">
             <PdaSearch />

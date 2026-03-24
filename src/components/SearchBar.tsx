@@ -101,7 +101,7 @@ export function SearchBar() {
     },
   });
 
-  const { state: viewState, openTransaction } = useView();
+  const { state: viewState, openTransaction, inspectMessage } = useView();
   const clearAndExplore = useClearAndExplore();
   const hasAutoExplored = useRef(false);
 
@@ -129,12 +129,21 @@ export function SearchBar() {
     [clearAndExplore, openTransaction],
   );
 
-  // Auto-explore on mount if URL has an address or tx signature
+  // Auto-explore on mount if URL has an address, tx signature, or message
   useEffect(() => {
     if (hasAutoExplored.current) return;
+    const urlParams = new URLSearchParams(window.location.search);
 
-    // Check for tx param first
-    const txParam = new URLSearchParams(window.location.search).get("tx");
+    // Check for message param first (inspect transaction)
+    const messageParam = urlParams.get("message");
+    if (messageParam) {
+      hasAutoExplored.current = true;
+      inspectMessage(messageParam);
+      return;
+    }
+
+    // Check for tx param
+    const txParam = urlParams.get("tx");
     if (txParam && isTxSignature(txParam.trim())) {
       hasAutoExplored.current = true;
       openTransaction(txParam.trim());
@@ -179,6 +188,7 @@ export function SearchBar() {
           onAccountClick={(addr) => clearAndExplore(addr)}
           onTransactionClick={(sig) => openTransaction(sig)}
         />
+
       </div>
 
     </div>
