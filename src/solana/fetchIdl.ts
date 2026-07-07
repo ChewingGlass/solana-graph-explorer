@@ -106,10 +106,10 @@ function parseIdlJson(jsonStr: string, programAddress?: string): Idl {
 const METADATA_HEADER_SIZE = 96;
 const METADATA_DISCRIMINATOR = 2;
 
-const enum MetadataEncoding { None = 0, Utf8 = 1, Base58 = 2, Base64 = 3 }
-const enum MetadataCompression { None = 0, Gzip = 1, Zlib = 2 }
-const enum MetadataFormat { None = 0, Json = 1, Yaml = 2, Toml = 3 }
-const enum MetadataDataSource { Direct = 0, Url = 1, External = 2 }
+const MetadataEncoding = { None: 0, Utf8: 1, Base58: 2, Base64: 3 } as const;
+const MetadataCompression = { None: 0, Gzip: 1, Zlib: 2 } as const;
+const MetadataFormat = { None: 0, Json: 1, Yaml: 2, Toml: 3 } as const;
+const MetadataDataSource = { Direct: 0, Url: 1, External: 2 } as const;
 
 interface MetadataAccountData {
   encoding: number;
