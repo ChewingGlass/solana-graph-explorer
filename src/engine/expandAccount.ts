@@ -413,8 +413,9 @@ export async function fetchAndDecodeMany(
           deriveIdlAddress(programId),
           deriveMetadataIdlAddress(programId),
         ]);
-        if (legacy.status === "fulfilled") addrs.push({ programId, addr: legacy.value, type: "legacy" });
+        // Metadata first: Anchor v1 publishes there, so it wins over a stale legacy IDL
         if (meta.status === "fulfilled") addrs.push({ programId, addr: meta.value, type: "metadata" });
+        if (legacy.status === "fulfilled") addrs.push({ programId, addr: legacy.value, type: "legacy" });
         return addrs;
       }),
     );
@@ -435,18 +436,22 @@ export async function fetchAndDecodeMany(
         programIdlAddrs.set(entry.programId, existing);
       }
 
-      // Try each IDL account (legacy first, then metadata) — parse directly, no re-fetch
-      const parsedIdls = Array.from(programIdlAddrs)
-        .filter(([programId]) => !hasIdl(programId))
-        .map(([programId, entries]) => ({
-          programId,
-          idl: entries
-            .map((entry) => idlAccountMap.get(entry.addr))
-            .filter((acct): acct is NonNullable<typeof acct> => !!acct)
-            .map((acct) => tryParseIdlFromAccount(acct, programId))
-            .find((idl): idl is Idl => !!idl),
-        }))
-        .filter((result): result is { programId: string; idl: Idl } => !!result.idl);
+      // Try each IDL account (metadata first, then legacy) — parse directly, no re-fetch
+      const parsedIdls = (
+        await Promise.all(
+          Array.from(programIdlAddrs)
+            .filter(([programId]) => !hasIdl(programId))
+            .map(async ([programId, entries]) => {
+              const accounts = entries
+                .map((entry) => idlAccountMap.get(entry.addr))
+                .filter((acct): acct is NonNullable<typeof acct> => !!acct);
+              const idls = await Promise.all(
+                accounts.map((acct) => tryParseIdlFromAccount(acct, programId, rpcUrl)),
+              );
+              return { programId, idl: idls.find((idl): idl is Idl => !!idl) };
+            }),
+        )
+      ).filter((result): result is { programId: string; idl: Idl } => !!result.idl);
 
       for (const { programId, idl } of parsedIdls) {
         setIdl(programId, idl);

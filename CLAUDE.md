@@ -19,6 +19,7 @@
 ## Key Conventions
 - Path alias: `@/` maps to `src/`
 - Anchor IDL PDA seeds: `["anchor:idl", programId]`
+- Anchor v1 IDLs live in the Program Metadata program (`ProgM6JCCvbYkfKqJYHePx4xxSUSqJp7rh8Lyv7nk7S`); canonical PDA seeds `[programId, "idl" zero-padded to 16 bytes]`, 96-byte header (see `src/solana/fetchIdl.ts`) — preferred over the legacy IDL account when both exist
 - IDL v0.30+ detection: presence of `metadata.spec` field
 - Relationship types: has_one, pda_seed, token, user_defined
 - BorshReader uses @solana/kit codecs (getU8Decoder, getAddressDecoder, etc.)
